@@ -1,0 +1,41 @@
+{
+  "name": "restoranpro",
+  "version": "1.0.0",
+  "description": "РесторанПРО — кассовая система",
+  "main": "main.js",
+  "author": "RestoranPRO",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --publish never",
+    "build:linux": "electron-builder --linux --publish never",
+    "build:mac": "electron-builder --mac --publish never"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.0",
+    "@capacitor/core": "^6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.0",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.restoranpro.app",
+    "productName": "РесторанПРО",
+    "artifactName": "RestoranPRO-Setup-${version}.${ext}",
+    "files": ["main.js", "www/**/*"],
+    "directories": { "buildResources": "build", "output": "dist" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.png" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "РесторанПРО"
+    },
+    "linux": { "target": ["AppImage"], "icon": "build/icon.png", "category": "Office" },
+    "mac": { "target": ["dmg"], "icon": "build/icon.png", "category": "public.app-category.business" }
+  }
+}

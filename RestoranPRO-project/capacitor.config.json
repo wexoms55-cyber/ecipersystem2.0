@@ -1,0 +1,6 @@
+{
+  "appId": "com.restoranpro.app",
+  "appName": "РесторанПРО",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}

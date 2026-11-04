@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>РесторанПРО — Кассовая система</title>
+<meta name="theme-color" content="#E24B4A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="РесторанПРО">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); }
+:root {
+  --accent: #E24B4A; --accent2: #1D9E75;
+  --bg: #f8f5f0; --card: #ffffff; --text: #2C2C2A; --muted: #888780;
+  --border: rgba(0,0,0,0.1); --sidebar-bg: #ffffff; --header-color: #2C2C2A;
+}
+#app { display:flex; flex-direction:column; min-height:100vh; background:var(--bg); background-size:cover; background-position:center; }
+#header { display:flex; align-items:center; justify-content:space-between; padding:10px 20px; background:var(--sidebar-bg); border-bottom:0.5px solid var(--border); flex-shrink:0; }
+#header h1 { font-size:18px; font-weight:500; color:var(--header-color); }
+#header-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+.htab { padding:7px 14px; border-radius:20px; font-size:13px; cursor:pointer; border:0.5px solid var(--border); background:transparent; color:var(--muted); transition:all 0.15s; }
+.htab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+#main { display:flex; flex:1; overflow:hidden; height:calc(100vh - 52px); }
+#sidebar { width:210px; flex-shrink:0; background:var(--sidebar-bg); border-right:0.5px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; }
+#content { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.view { display:none; flex:1; overflow:auto; padding:14px; flex-direction:column; }
+.view.visible { display:flex; }
+#order-view { padding:0; flex-direction:row; }
+
+.section-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; padding:14px 14px 6px; }
+.cat-btn { display:flex; align-items:center; gap:10px; padding:9px 14px; cursor:pointer; font-size:13px; color:var(--text); border-left:3px solid transparent; transition:all 0.15s; }
+.cat-btn:hover { background:rgba(0,0,0,0.04); }
+.cat-btn.active { border-left-color:var(--accent); background:rgba(226,75,74,0.07); color:var(--accent); font-weight:500; }
+
+#tables-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:12px; padding:12px; }
+.table-card { background:var(--card); border-radius:14px; border:0.5px solid var(--border); padding:16px 10px; text-align:center; cursor:pointer; transition:all 0.15s; }
+.table-card:hover { transform:scale(1.04); box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+.table-card.occupied { border-color:var(--accent); background:rgba(226,75,74,0.06); }
+.table-card.my-table { border-color:var(--accent2); background:rgba(29,158,117,0.08); }
+.table-card.locked { opacity:0.55; cursor:not-allowed; background:#f0eeea; border-color:var(--border); }
+.table-card.locked:hover { transform:none; box-shadow:none; }
+.table-num { font-size:22px; font-weight:500; color:var(--text); }
+.table-status { font-size:11px; color:var(--muted); margin-top:4px; }
+.table-sum { font-size:12px; color:var(--accent); font-weight:500; margin-top:4px; }
+
+#menu-section { flex:1; padding:14px; overflow-y:auto; }
+#menu-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.menu-item { background:var(--card); border-radius:12px; border:0.5px solid var(--border); padding:12px; cursor:pointer; transition:all 0.12s; }
+.menu-item:hover { border-color:var(--accent2); transform:translateY(-2px); }
+.menu-item:active { transform:scale(0.97); }
+.mi-name { font-size:13px; font-weight:500; color:var(--text); }
+.mi-price { font-size:12px; color:var(--accent2); margin-top:5px; }
+.mi-emoji { font-size:26px; margin-bottom:7px; }
+
+#order-panel { width:260px; flex-shrink:0; border-left:0.5px solid var(--border); background:var(--card); display:flex; flex-direction:column; }
+#order-header { padding:14px; border-bottom:0.5px solid var(--border); }
+#order-header h3 { font-size:15px; font-weight:500; color:var(--text); }
+#order-items { flex:1; overflow-y:auto; padding:8px; }
+.order-item { display:flex; align-items:center; gap:8px; padding:7px 4px; border-bottom:0.5px solid var(--border); }
+.oi-name { flex:1; font-size:13px; color:var(--text); }
+.oi-qty { display:flex; align-items:center; gap:4px; }
+.qty-btn { width:24px; height:24px; border-radius:50%; border:0.5px solid var(--border); background:transparent; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; color:var(--text); }
+.qty-btn:hover { background:rgba(0,0,0,0.06); }
+.oi-price { font-size:12px; color:var(--muted); min-width:54px; text-align:right; }
+.cancel-item { width:20px; height:20px; border-radius:50%; border:none; background:rgba(226,75,74,0.12); cursor:pointer; color:var(--accent); font-size:13px; display:flex; align-items:center; justify-content:center; }
+#order-footer { padding:12px 14px; border-top:0.5px solid var(--border); }
+.total-row { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); margin-bottom:5px; }
+.total-main { display:flex; justify-content:space-between; font-size:17px; font-weight:500; color:var(--text); margin-bottom:12px; }
+.btn-pay { width:100%; padding:10px; border-radius:10px; border:none; background:var(--accent2); color:#fff; font-size:14px; font-weight:500; cursor:pointer; margin-bottom:8px; }
+.btn-cancel-check { width:100%; padding:10px; border-radius:10px; border:0.5px solid var(--accent); background:transparent; color:var(--accent); font-size:13px; cursor:pointer; }
+.btn-pay:hover { opacity:0.9; }
+.btn-cancel-check:hover { background:rgba(226,75,74,0.07); }
+.menu-cat-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.mct { padding:5px 12px; border-radius:20px; border:0.5px solid var(--border); font-size:12px; cursor:pointer; background:var(--card); color:var(--text); }
+.mct.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+.report-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+.stat-card { background:var(--card); border-radius:12px; border:0.5px solid var(--border); padding:16px 18px; }
+.stat-label { font-size:12px; color:var(--muted); }
+.stat-val { font-size:24px; font-weight:500; color:var(--text); margin-top:5px; }
+.stat-sub { font-size:12px; color:var(--accent2); margin-top:3px; }
+.checks-list { background:var(--card); border-radius:12px; border:0.5px solid var(--border); overflow:hidden; }
+.check-row { display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:0.5px solid var(--border); font-size:13px; }
+.check-row:last-child { border-bottom:none; }
+.check-status { padding:3px 10px; border-radius:20px; font-size:11px; }
+.cs-paid { background:rgba(29,158,117,0.12); color:#0F6E56; }
+.cs-canceled { background:rgba(226,75,74,0.12); color:#A32D2D; }
+
+.settings-section { background:var(--card); border-radius:12px; border:0.5px solid var(--border); padding:16px 18px; margin-bottom:14px; }
+.settings-section h3 { font-size:14px; font-weight:500; color:var(--text); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.setting-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:12px; flex-wrap:wrap; }
+.setting-label { font-size:13px; color:var(--text); }
+.color-input { width:44px; height:30px; border-radius:6px; border:0.5px solid var(--border); cursor:pointer; padding:2px; }
+.setting-select { padding:6px 12px; border-radius:8px; border:0.5px solid var(--border); font-size:13px; background:var(--bg); color:var(--text); }
+.wallpaper-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:8px; }
+.wp-thumb { border-radius:10px; height:56px; cursor:pointer; border:2px solid transparent; transition:all 0.15s; display:flex; align-items:flex-end; justify-content:center; padding-bottom:5px; }
+.wp-thumb:hover,.wp-thumb.active { border-color:var(--accent); }
+.wp-thumb span { font-size:10px; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.8); }
+.btn-primary { padding:9px 20px; border-radius:9px; border:none; background:var(--accent); color:#fff; font-size:13px; cursor:pointer; }
+.btn-success { padding:9px 20px; border-radius:9px; border:none; background:var(--accent2); color:#fff; font-size:13px; cursor:pointer; }
+.btn-outline { padding:7px 16px; border-radius:9px; border:0.5px solid var(--border); background:transparent; color:var(--text); font-size:13px; cursor:pointer; }
+.btn-danger-sm { padding:5px 12px; border-radius:8px; border:0.5px solid var(--accent); background:transparent; color:var(--accent); font-size:12px; cursor:pointer; }
+
+.discount-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.discount-row input[type=number] { width:64px; }
+.disc-apply { padding:5px 12px; border-radius:8px; border:0.5px solid var(--accent2); background:transparent; color:var(--accent2); font-size:12px; cursor:pointer; }
+
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:100; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--card); border-radius:16px; padding:24px 28px; min-width:300px; max-width:420px; width:90%; }
+.modal h3 { font-size:16px; font-weight:500; margin-bottom:10px; color:var(--text); }
+.modal p { font-size:13px; color:var(--muted); margin-bottom:18px; }
+.modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+.mbtn { padding:8px 18px; border-radius:9px; border:0.5px solid var(--border); background:transparent; font-size:13px; cursor:pointer; color:var(--text); }
+.mbtn.danger { background:var(--accent); color:#fff; border-color:var(--accent); }
+.mbtn.success { background:var(--accent2); color:#fff; border-color:var(--accent2); }
+
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#2C2C2A; color:#fff; padding:10px 22px; border-radius:24px; font-size:13px; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap; z-index:300; }
+.toast.show { opacity:1; }
+
+input[type=text],input[type=number],input[type=url],input[type=tel],input[type=email],input[type=password],select.form-input {
+  padding:7px 10px; border-radius:8px; border:0.5px solid var(--border);
+  font-size:13px; background:var(--bg); color:var(--text); outline:none;
+}
+input:focus,select.form-input:focus { border-color:var(--accent2); }
+
+.staff-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+.staff-card { background:var(--card); border-radius:14px; border:0.5px solid var(--border); padding:16px; position:relative; }
+.staff-avatar { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:500; color:#fff; margin-bottom:10px; }
+.staff-name { font-size:14px; font-weight:500; color:var(--text); }
+.staff-role { font-size:12px; color:var(--muted); margin-top:2px; }
+.staff-salary { font-size:13px; color:var(--accent2); font-weight:500; margin-top:8px; }
+.staff-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+.staff-status { position:absolute; top:14px; right:14px; width:9px; height:9px; border-radius:50%; }
+.ss-active { background:#1D9E75; }
+.ss-inactive { background:#888780; }
+.staff-earned { font-size:11px; color:var(--muted); margin-top:2px; }
+
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-group label { font-size:12px; color:var(--muted); }
+.form-group input,.form-group select { width:100%; }
+.form-group.full { grid-column:1/-1; }
+
+.waiter-select-wrap { margin-bottom:10px; }
+.waiter-select-wrap select { width:100%; padding:7px 10px; border-radius:8px; border:0.5px solid var(--border); font-size:13px; background:var(--bg); color:var(--text); }
+
+.shift-log { background:var(--card); border-radius:12px; border:0.5px solid var(--border); overflow:hidden; }
+.shift-row { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:0.5px solid var(--border); font-size:13px; }
+.shift-row:last-child { border-bottom:none; }
+
+.staff-filter-tabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.menu-manage-list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.manage-item { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:var(--bg); border-radius:8px; border:0.5px solid var(--border); font-size:13px; gap:8px; }
+
+#waiter-lobby-view {
+  display:none; flex:1; flex-direction:column; align-items:center; justify-content:center;
+  padding:40px 20px; background:var(--bg); min-height:100vh;
+}
+#waiter-lobby-view.visible { display:flex; }
+.lobby-title { font-size:28px; font-weight:600; color:var(--text); margin-bottom:8px; text-align:center; }
+.lobby-subtitle { font-size:15px; color:var(--muted); margin-bottom:36px; text-align:center; }
+.lobby-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; max-width:900px; width:100%; }
+.lobby-card {
+  background:var(--card); border-radius:16px; border:0.5px solid var(--border);
+  padding:24px 16px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative;
+}
+.lobby-card:hover { transform:translateY(-4px); box-shadow:0 8px 24px rgba(0,0,0,0.1); border-color:var(--accent2); }
+.lobby-card.admin-card { border-color:var(--accent); background:rgba(226,75,74,0.04); }
+.lobby-avatar {
+  width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-size:24px; font-weight:600; color:#fff; margin:0 auto 14px;
+}
+.lobby-name { font-size:15px; font-weight:500; color:var(--text); margin-bottom:4px; }
+.lobby-role { font-size:12px; color:var(--muted); }
+.lobby-tables-count { margin-top:10px; font-size:12px; color:var(--accent2); font-weight:500; }
+.lobby-lock { position:absolute; top:12px; right:12px; font-size:14px; color:var(--muted); }
+.lobby-empty { text-align:center; padding:60px 20px; color:var(--muted); font-size:15px; }
+
+.waiter-mode-bar {
+  display:none; align-items:center; justify-content:space-between; padding:10px 16px;
+  background:linear-gradient(90deg,var(--accent2),#0F6E56); color:#fff; font-size:14px; flex-shrink:0;
+}
+.waiter-mode-bar.visible { display:flex; }
+.waiter-mode-bar.admin-bar { background:linear-gradient(90deg,var(--accent),#A32D2D); }
+.waiter-mode-info { display:flex; align-items:center; gap:10px; }
+.waiter-mode-avatar {
+  width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.25);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600;
+}
+.btn-logout {
+  padding:6px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.4);
+  background:rgba(255,255,255,0.15); color:#fff; font-size:13px; cursor:pointer;
+  display:flex; align-items:center; gap:6px;
+}
+.btn-logout:hover { background:rgba(255,255,255,0.25); }
+
+.my-tables-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:0 4px; }
+.my-tables-title { font-size:16px; font-weight:500; color:var(--text); }
+
+.password-input-wrap { margin:16px 0 20px; }
+.password-input-wrap input { width:100%; padding:12px 14px; font-size:16px; letter-spacing:2px; text-align:center; }
+.password-error { color:var(--accent); font-size:13px; margin-top:8px; display:none; }
+
+.zone-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; padding:0 4px; }
+.zone-tab {
+  padding:7px 14px; border-radius:20px; border:0.5px solid var(--border);
+  font-size:13px; cursor:pointer; background:var(--card); color:var(--text);
+}
+.zone-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+.zone-manage-item {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:10px 12px; background:var(--bg); border-radius:8px; border:0.5px solid var(--border);
+  font-size:13px; margin-bottom:8px;
+}
+
+/* Печать чека */
+#print-area { display:none; }
+@media print {
+  body * { visibility: hidden !important; }
+  #print-area, #print-area * { visibility: visible !important; }
+  #print-area {
+    display: block !important;
+    position: absolute; left: 0; top: 0; width: 80mm;
+    font-family: 'Courier New', monospace; font-size: 12px; color: #000;
+    padding: 8px;
+  }
+  .no-print { display: none !important; }
+}
+.receipt-box {
+  font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.4;
+  max-width: 320px; margin: 0 auto; color: #111;
+}
+.receipt-box h2 { text-align: center; font-size: 16px; margin-bottom: 4px; }
+.receipt-box .center { text-align: center; }
+.receipt-box .line { border-top: 1px dashed #333; margin: 8px 0; }
+.receipt-box .row { display: flex; justify-content: space-between; gap: 8px; }
+.receipt-box .total { font-weight: bold; font-size: 15px; }
+
+/* Встроенные иконки (работают без интернета) */
+.ti{display:inline-block;width:1.15em;height:1.15em;vertical-align:-0.2em;background-color:currentColor;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;-webkit-mask-size:contain;mask-size:contain;font-style:normal}
+.ti-printer{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4%22/%3E%3Crect x=%227%22 y=%2214%22 width=%2210%22 height=%227%22 rx=%220%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M17 17h2a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h2M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4%22/%3E%3Crect x=%227%22 y=%2214%22 width=%2210%22 height=%227%22 rx=%220%22/%3E%3C/svg%3E")}
+.ti-plus{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 5v14M5 12h14%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 5v14M5 12h14%22/%3E%3C/svg%3E")}
+.ti-trash{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 7h16M10 11v6M14 11v6M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12M9 7V4h6v3%22/%3E%3C/svg%3E")}
+.ti-cash{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%222%22 y=%226%22 width=%2220%22 height=%2212%22 rx=%222%22/%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%222.5%22/%3E%3Cpath d=%22M6 12h.01M18 12h.01%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%222%22 y=%226%22 width=%2220%22 height=%2212%22 rx=%222%22/%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%222.5%22/%3E%3Cpath d=%22M6 12h.01M18 12h.01%22/%3E%3C/svg%3E")}
+.ti-x{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 6l12 12M18 6L6 18%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 6l12 12M18 6L6 18%22/%3E%3C/svg%3E")}
+.ti-layout-grid{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%224%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%224%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%224%22 y=%2214%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%2214%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%224%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%224%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%224%22 y=%2214%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%2214%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3C/svg%3E")}
+.ti-device-floppy{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 4h10l4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM14 4v4H8V4%22/%3E%3Ccircle cx=%2212%22 cy=%2214%22 r=%222%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M6 4h10l4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM14 4v4H8V4%22/%3E%3Ccircle cx=%2212%22 cy=%2214%22 r=%222%22/%3E%3C/svg%3E")}
+.ti-users{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%229%22 cy=%227%22 r=%224%22/%3E%3Cpath d=%22M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%229%22 cy=%227%22 r=%224%22/%3E%3Cpath d=%22M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85%22/%3E%3C/svg%3E")}
+.ti-user-off{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%229%22 cy=%227%22 r=%224%22/%3E%3Cpath d=%22M3 21v-2a4 4 0 0 1 4-4h2M3 3l18 18%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%229%22 cy=%227%22 r=%224%22/%3E%3Cpath d=%22M3 21v-2a4 4 0 0 1 4-4h2M3 3l18 18%22/%3E%3C/svg%3E")}
+.ti-soup{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 11h16a8 8 0 0 1-16 0zM8 4c0 1.5 1 1.5 1 3M12 4c0 1.5 1 1.5 1 3M16 4c0 1.5 1 1.5 1 3%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 11h16a8 8 0 0 1-16 0zM8 4c0 1.5 1 1.5 1 3M12 4c0 1.5 1 1.5 1 3M16 4c0 1.5 1 1.5 1 3%22/%3E%3C/svg%3E")}
+.ti-settings{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10.3 4.3l.4-1.3h2.6l.4 1.3 1.6.9 1.4-.4 1.8 1.8-.4 1.4.9 1.6 1.3.4v2.6l-1.3.4-.9 1.6.4 1.4-1.8 1.8-1.4-.4-1.6.9-.4 1.3h-2.6l-.4-1.3-1.6-.9-1.4.4-1.8-1.8.4-1.4-.9-1.6L3 13.3v-2.6l1.3-.4.9-1.6-.4-1.4 1.8-1.8 1.4.4z%22/%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%223%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10.3 4.3l.4-1.3h2.6l.4 1.3 1.6.9 1.4-.4 1.8 1.8-.4 1.4.9 1.6 1.3.4v2.6l-1.3.4-.9 1.6.4 1.4-1.8 1.8-1.4-.4-1.6.9-.4 1.3h-2.6l-.4-1.3-1.6-.9-1.4.4-1.8-1.8.4-1.4-.9-1.6L3 13.3v-2.6l1.3-.4.9-1.6-.4-1.4 1.8-1.8 1.4.4z%22/%3E%3Ccircle cx=%2212%22 cy=%2212%22 r=%223%22/%3E%3C/svg%3E")}
+.ti-receipt{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2zM9 7h6M9 11h6%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2zM9 7h6M9 11h6%22/%3E%3C/svg%3E")}
+.ti-photo{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%225%22 width=%2216%22 height=%2214%22 rx=%222%22/%3E%3Ccircle cx=%229%22 cy=%2210%22 r=%221.5%22/%3E%3Cpath d=%22M4 17l5-5 4 4 3-3 4 4%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%225%22 width=%2216%22 height=%2214%22 rx=%222%22/%3E%3Ccircle cx=%229%22 cy=%2210%22 r=%221.5%22/%3E%3Cpath d=%22M4 17l5-5 4 4 3-3 4 4%22/%3E%3C/svg%3E")}
+.ti-palette{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3a9 9 0 1 0 0 18c1 0 2-.8 2-2 0-.6-.3-1-.6-1.4-.3-.4-.4-.8-.4-1.1 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z%22/%3E%3Ccircle cx=%227.5%22 cy=%2211%22 r=%220.6%22/%3E%3Ccircle cx=%2212%22 cy=%227.5%22 r=%220.6%22/%3E%3Ccircle cx=%2216.5%22 cy=%2211%22 r=%220.6%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 3a9 9 0 1 0 0 18c1 0 2-.8 2-2 0-.6-.3-1-.6-1.4-.3-.4-.4-.8-.4-1.1 0-.8.7-1.5 1.5-1.5H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z%22/%3E%3Ccircle cx=%227.5%22 cy=%2211%22 r=%220.6%22/%3E%3Ccircle cx=%2212%22 cy=%227.5%22 r=%220.6%22/%3E%3Ccircle cx=%2216.5%22 cy=%2211%22 r=%220.6%22/%3E%3C/svg%3E")}
+.ti-logout{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2M9 12h12M18 9l3 3-3 3%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2M9 12h12M18 9l3 3-3 3%22/%3E%3C/svg%3E")}
+.ti-login{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10 8V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-2M3 12h12M12 9l3 3-3 3%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10 8V6a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-2M3 12h12M12 9l3 3-3 3%22/%3E%3C/svg%3E")}
+.ti-lock{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%225%22 y=%2211%22 width=%2214%22 height=%2210%22 rx=%222%22/%3E%3Cpath d=%22M8 11V7a4 4 0 0 1 8 0v4%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%225%22 y=%2211%22 width=%2214%22 height=%2210%22 rx=%222%22/%3E%3Cpath d=%22M8 11V7a4 4 0 0 1 8 0v4%22/%3E%3C/svg%3E")}
+.ti-key{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%228%22 cy=%2215%22 r=%224%22/%3E%3Cpath d=%22M10.8 12.2L20 3M17 6l3 3M15 8l2 2%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Ccircle cx=%228%22 cy=%2215%22 r=%224%22/%3E%3Cpath d=%22M10.8 12.2L20 3M17 6l3 3M15 8l2 2%22/%3E%3C/svg%3E")}
+.ti-edit{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17zM13.5 6.5l3 3%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17zM13.5 6.5l3 3%22/%3E%3C/svg%3E")}
+.ti-chart-bar{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%223%22 y=%2212%22 width=%224%22 height=%228%22 rx=%221%22/%3E%3Crect x=%2210%22 y=%228%22 width=%224%22 height=%2212%22 rx=%221%22/%3E%3Crect x=%2217%22 y=%224%22 width=%224%22 height=%2216%22 rx=%221%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%223%22 y=%2212%22 width=%224%22 height=%228%22 rx=%221%22/%3E%3Crect x=%2210%22 y=%228%22 width=%224%22 height=%2212%22 rx=%221%22/%3E%3Crect x=%2217%22 y=%224%22 width=%224%22 height=%2216%22 rx=%221%22/%3E%3C/svg%3E")}
+.ti-building{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 21h18M9 8h1M9 12h1M9 16h1M14 8h1M14 12h1M14 16h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16%22/%3E%3C/svg%3E")}
+.ti-building-store{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 21h18M3 7v1a3 3 0 0 0 6 0M9 8a3 3 0 0 0 6 0M15 8a3 3 0 0 0 6 0V7H3l2-4h14l2 4M5 21V10.85M19 21V10.85M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 21h18M3 7v1a3 3 0 0 0 6 0M9 8a3 3 0 0 0 6 0M15 8a3 3 0 0 0 6 0V7H3l2-4h14l2 4M5 21V10.85M19 21V10.85M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4%22/%3E%3C/svg%3E")}
+.ti-category{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%224%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%2214%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Ccircle cx=%2217%22 cy=%227%22 r=%223%22/%3E%3Ccircle cx=%227%22 cy=%2217%22 r=%223%22/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Crect x=%224%22 y=%224%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Crect x=%2214%22 y=%2214%22 width=%226%22 height=%226%22 rx=%221%22/%3E%3Ccircle cx=%2217%22 cy=%227%22 r=%223%22/%3E%3Ccircle cx=%227%22 cy=%2217%22 r=%223%22/%3E%3C/svg%3E")}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="waiter-mode-bar" id="waiter-mode-bar">
+    <div class="waiter-mode-info">
+      <div class="waiter-mode-avatar" id="wm-avatar">?</div>
+      <div>
+        <div style="font-weight:500;" id="wm-name">Официант</div>
+        <div style="font-size:11px;opacity:0.85;" id="wm-role">Официант</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="logoutToLobby()">
+      <i class="ti ti-logout"></i> Выйти в лобби
+    </button>
+  </div>
+
+  <div id="header" style="display:none;">
+    <h1>🍽 РесторанПРО</h1>
+    <div id="header-tabs">
+      <button class="htab active" onclick="switchTab('tables')"><i class="ti ti-layout-grid"></i> Столы</button>
+      <button class="htab" onclick="switchTab('order')"><i class="ti ti-receipt"></i> Заказ</button>
+      <button class="htab" id="tab-staff" onclick="switchTab('staff')"><i class="ti ti-users"></i> Персонал</button>
+      <button class="htab" id="tab-reports" onclick="switchTab('reports')"><i class="ti ti-chart-bar"></i> Отчёты</button>
+      <button class="htab" id="tab-settings" onclick="switchTab('settings')"><i class="ti ti-settings"></i> Настройки</button>
+    </div>
+  </div>
+
+  <div id="waiter-lobby-view" class="visible">
+    <div class="lobby-title">👋 РесторанПРО</div>
+    <div class="lobby-subtitle">Выберите профиль и введите пароль</div>
+    <div class="lobby-grid" id="lobby-grid"></div>
+  </div>
+
+  <div id="main" style="display:none;">
+    <div id="sidebar">
+      <div class="section-label">Категории</div>
+      <div id="sidebar-cats"></div>
+      <div class="section-label" style="margin-top:10px;">Смена</div>
+      <div style="padding:10px 14px;font-size:12px;color:var(--muted);">Открыта: <b id="shift-time"></b></div>
+      <div style="padding:0 14px 10px;font-size:13px;color:var(--text);font-weight:500;">Касса: <span id="till-val" style="color:var(--accent2)">0 сом</span></div>
+      <div style="padding:0 14px 14px;font-size:12px;color:var(--muted);">Персонал: <span id="sidebar-staff-count">0</span> чел.</div>
+    </div>
+
+    <div id="content">
+
+      <div id="tables-view" class="view visible">
+        <div class="my-tables-header" id="my-tables-header" style="display:none;">
+          <div class="my-tables-title">Мои столы</div>
+          <div style="font-size:13px;color:var(--muted);" id="my-tables-count">0 активных</div>
+        </div>
+        <div class="zone-tabs" id="zone-tabs"></div>
+        <div style="padding:6px 4px 12px;font-size:13px;color:var(--muted);" id="tables-hint">Нажмите на стол, чтобы открыть заказ</div>
+        <div id="tables-grid"></div>
+      </div>
+
+      <div id="order-view" class="view">
+        <div id="menu-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <span id="order-table-label" style="font-size:15px;font-weight:500;color:var(--text)">Стол не выбран</span>
+            <button class="btn-outline" onclick="switchTab('tables')" style="font-size:12px;padding:5px 12px;">← Столы</button>
+          </div>
+          <div class="waiter-select-wrap" id="waiter-select-wrap">
+            <select id="waiter-select"><option value="">— Выберите официанта —</option></select>
+          </div>
+          <div class="menu-cat-tabs" id="order-cat-tabs"></div>
+          <div id="menu-grid"></div>
+        </div>
+        <div id="order-panel">
+          <div id="order-header">
+            <h3>Чек <span id="order-table-num" style="color:var(--accent)"></span></h3>
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;" id="order-time-label"></div>
+            <div style="font-size:11px;color:var(--accent2);margin-top:2px;" id="order-waiter-label"></div>
+          </div>
+          <div id="order-items"><div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Добавьте блюда</div></div>
+          <div id="order-footer">
+            <div class="discount-row">
+              <span style="font-size:12px;color:var(--muted);">Гостей</span>
+              <input type="number" id="guests-input" min="1" max="50" value="1" style="width:54px;">
+              <span style="font-size:12px;color:var(--muted);">Скидка %</span>
+              <input type="number" id="discount-input" min="0" max="100" value="0" onchange="recalc()" style="width:54px;">
+              <button class="disc-apply" onclick="recalc()">OK</button>
+            </div>
+            <div class="total-row"><span>Сумма</span><span id="subtotal">0 сом</span></div>
+            <div class="total-row"><span>Скидка</span><span id="discount-line">0 сом</span></div>
+            <div class="total-main"><span>Итого</span><span id="total-price">0 сом</span></div>
+            <button class="btn-pay" onclick="payCheck()"><i class="ti ti-cash"></i> Оплатить</button>
+            <button class="btn-outline" style="width:100%;margin-bottom:8px;padding:9px;" onclick="printPreCheck()"><i class="ti ti-printer"></i> Предчек</button>
+            <button class="btn-cancel-check" onclick="openCancelModal()"><i class="ti ti-x"></i> Отменить чек</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="staff-view" class="view" style="gap:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div>
+            <h2 style="font-size:16px;font-weight:500;color:var(--text);">Сотрудники</h2>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="staff-summary"></div>
+          </div>
+          <button class="btn-success" id="btn-add-staff" onclick="openAddStaffModal()"><i class="ti ti-plus"></i> Добавить</button>
+        </div>
+        <div class="staff-filter-tabs">
+          <button class="mct active" onclick="filterStaff('all',this)">Все</button>
+          <button class="mct" onclick="filterStaff('waiter',this)">Официанты</button>
+          <button class="mct" onclick="filterStaff('cook',this)">Повара</button>
+          <button class="mct" onclick="filterStaff('bartender',this)">Бармены</button>
+          <button class="mct" onclick="filterStaff('manager',this)">Менеджеры</button>
+          <button class="mct" onclick="filterStaff('other',this)">Прочие</button>
+        </div>
+        <div id="staff-grid" class="staff-grid"></div>
+        <div style="margin-top:20px;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3 style="font-size:14px;font-weight:500;color:var(--text);">Журнал смен и выплат</h3>
+            <button class="btn-outline" onclick="openPayModal()" style="font-size:12px;"><i class="ti ti-cash"></i> Выплата зарплаты</button>
+          </div>
+          <div id="shift-log" class="shift-log"><div style="padding:20px;text-align:center;font-size:13px;color:var(--muted);">Записей пока нет</div></div>
+        </div>
+      </div>
+
+      <div id="reports-view" class="view" style="gap:14px;">
+        <div class="report-grid">
+          <div class="stat-card"><div class="stat-label">Выручка за день</div><div class="stat-val" id="rep-revenue">0 сом</div><div class="stat-sub" id="rep-checks">0 чеков</div></div>
+          <div class="stat-card"><div class="stat-label">Средний чек</div><div class="stat-val" id="rep-avg">0 сом</div><div class="stat-sub">за визит</div></div>
+          <div class="stat-card"><div class="stat-label">Скидки</div><div class="stat-val" id="rep-discounts">0 сом</div><div class="stat-sub">суммарно</div></div>
+          <div class="stat-card"><div class="stat-label">Фонд ЗП</div><div class="stat-val" id="rep-salary">0 сом</div><div class="stat-sub" id="rep-staff-cnt">0 сотрудников</div></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="font-size:14px;font-weight:500;color:var(--text);">Статистика по официантам</div>
+          <button class="btn-outline" onclick="printDailyReport()" style="font-size:12px;"><i class="ti ti-printer"></i> Печать отчёта</button>
+        </div>
+        <div class="checks-list" id="waiter-stats-list"></div>
+        <div style="font-size:14px;font-weight:500;color:var(--text);margin-top:4px;">История чеков</div>
+        <div class="checks-list" id="checks-list"></div>
+      </div>
+
+      <div id="settings-view" class="view" style="gap:0;">
+
+        <div class="settings-section">
+          <h3><i class="ti ti-lock"></i> Пароль администратора</h3>
+          <div class="setting-row">
+            <span class="setting-label">Текущий пароль</span>
+            <input type="password" id="admin-pwd-current" placeholder="••••" style="width:140px;">
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Новый пароль</span>
+            <input type="password" id="admin-pwd-new" placeholder="Новый пароль" style="width:140px;">
+          </div>
+          <button class="btn-primary" onclick="changeAdminPassword()"><i class="ti ti-key"></i> Сменить пароль</button>
+          <div style="font-size:12px;color:var(--muted);margin-top:10px;">По умолчанию: <b>admin</b></div>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-building"></i> Зоны (залы / терраса / кабинки)</h3>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <input type="text" id="new-zone-emoji" placeholder="Эмодзи" style="width:70px;" value="🏠">
+            <input type="text" id="new-zone-name" placeholder="Зал 1, Терраса, Кабинка VIP..." style="flex:1;min-width:160px;">
+            <button class="btn-success" onclick="addZone()"><i class="ti ti-plus"></i> Добавить зону</button>
+          </div>
+          <div id="zones-manage-list"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-layout-grid"></i> Столы и привязка к зонам</h3>
+          <div class="setting-row">
+            <span class="setting-label">Количество столов</span>
+            <input type="number" id="table-count" value="12" min="1" max="80" style="width:80px;">
+          </div>
+          <div id="tables-zone-assign" style="margin-top:10px;"></div>
+          <button class="btn-primary" style="margin-top:12px;" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> Сохранить столы и зоны</button>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-category"></i> Категории меню</h3>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="new-cat-emoji" placeholder="🥗" style="width:70px;">
+            <input type="text" id="new-cat-name" placeholder="Название" style="flex:1;">
+            <button class="btn-success" onclick="addCategory()"><i class="ti ti-plus"></i></button>
+          </div>
+          <div id="categories-manage-list" class="menu-manage-list"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-soup"></i> Блюда меню</h3>
+          <div class="form-grid" style="margin-bottom:12px;">
+            <div class="form-group"><label>Название</label><input type="text" id="new-item-name" placeholder="Борщ"></div>
+            <div class="form-group"><label>Категория</label><select id="new-item-cat" class="form-input"></select></div>
+            <div class="form-group"><label>Цена</label><input type="number" id="new-item-price" placeholder="250"></div>
+            <div class="form-group"><label>Эмодзи</label><input type="text" id="new-item-emoji" placeholder="🍲"></div>
+          </div>
+          <button class="btn-success" onclick="addMenuItem()" style="margin-bottom:14px;"><i class="ti ti-plus"></i> Добавить блюдо</button>
+          <div id="menu-manage-list" class="menu-manage-list"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-palette"></i> Цвета</h3>
+          <div class="setting-row"><span class="setting-label">Основной акцент</span><input type="color" class="color-input" id="color-accent" value="#E24B4A" onchange="applyColor()"></div>
+          <div class="setting-row"><span class="setting-label">Второй акцент</span><input type="color" class="color-input" id="color-accent2" value="#1D9E75" onchange="applyColor()"></div>
+          <div class="setting-row"><span class="setting-label">Фон</span><input type="color" class="color-input" id="color-bg" value="#f8f5f0" onchange="applyColor()"></div>
+          <div class="setting-row"><span class="setting-label">Боковая панель</span><input type="color" class="color-input" id="color-sidebar" value="#ffffff" onchange="applyColor()"></div>
+          <div class="setting-row"><span class="setting-label">Заголовки</span><input type="color" class="color-input" id="color-header" value="#2C2C2A" onchange="applyColor()"></div>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-photo"></i> Обои</h3>
+          <div class="wallpaper-grid" id="wp-grid"></div>
+          <div style="margin-top:12px;font-size:12px;color:var(--muted);">URL:</div>
+          <div style="display:flex;gap:8px;margin-top:7px;">
+            <input type="url" id="wp-url" placeholder="https://..." style="flex:1;">
+            <button class="btn-outline" onclick="applyWallpaperUrl()">Применить</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3><i class="ti ti-building-store"></i> Заведение</h3>
+          <div class="setting-row"><span class="setting-label">Название</span><input type="text" id="rest-name" value="РесторанПРО" style="width:180px;"></div>
+          <div class="setting-row"><span class="setting-label">Валюта</span>
+            <select id="currency-select" class="setting-select" onchange="currencyChanged()">
+              <option value="сом">сом (KGS)</option>
+              <option value="₸">₸ (KZT)</option>
+              <option value="₽">₽ (RUB)</option>
+              <option value="$">$ (USD)</option>
+              <option value="€">€ (EUR)</option>
+            </select>
+          </div>
+          <button class="btn-primary" onclick="saveSettings()"><i class="ti ti-device-floppy"></i> Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cancel-modal">
+  <div class="modal">
+    <h3>Отменить чек?</h3>
+    <p>Все блюда будут удалены. Стол освободится.</p>
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal('cancel-modal')">Нет</button>
+      <button class="mbtn danger" onclick="cancelCheck()">Да, отменить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pay-modal">
+  <div class="modal">
+    <h3>Подтвердить оплату</h3>
+    <p id="pay-modal-text"></p>
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal('pay-modal')">Отмена</button>
+      <button class="mbtn success" onclick="confirmPay(false)">Оплачено ✓</button>
+      <button class="mbtn success" onclick="confirmPay(true)" style="background:#0F6E56;"><i class="ti ti-printer"></i> Оплатить и печать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Область печати чека -->
+<div id="print-area"></div>
+
+<!-- Модалка после оплаты -->
+<div class="modal-overlay" id="paid-modal">
+  <div class="modal">
+    <h3>✓ Оплачено</h3>
+    <p id="paid-modal-text"></p>
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal('paid-modal')">Закрыть</button>
+      <button class="mbtn success" onclick="printLastCheck()"><i class="ti ti-printer"></i> Печать чека</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="password-modal">
+  <div class="modal" style="max-width:360px;">
+    <h3 id="pwd-modal-title">Вход</h3>
+    <p id="pwd-modal-name" style="margin-bottom:0;"></p>
+    <div class="password-input-wrap">
+      <input type="password" id="pwd-input" placeholder="Пароль" autocomplete="off" onkeydown="if(event.key==='Enter')confirmPasswordLogin()">
+      <div class="password-error" id="pwd-error">Неверный пароль</div>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal('password-modal')">Отмена</button>
+      <button class="mbtn success" onclick="confirmPasswordLogin()">Войти</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="add-staff-modal">
+  <div class="modal" style="max-width:460px;">
+    <h3>Новый сотрудник</h3>
+    <div class="form-grid" style="margin-bottom:16px;">
+      <div class="form-group full"><label>Полное имя</label><input type="text" id="sf-name" placeholder="Иванов Иван"></div>
+      <div class="form-group">
+        <label>Должность</label>
+        <select id="sf-role" class="form-input">
+          <option value="waiter">Официант</option>
+          <option value="cook">Повар</option>
+          <option value="bartender">Бармен</option>
+          <option value="manager">Менеджер</option>
+          <option value="other">Прочее</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Оклад / мес</label><input type="number" id="sf-salary" placeholder="25000" min="0"></div>
+      <div class="form-group"><label>Телефон</label><input type="tel" id="sf-phone" placeholder="+996 ..."></div>
+      <div class="form-group"><label>Дата найма</label><input type="text" id="sf-hired" placeholder="01.01.2025"></div>
+      <div class="form-group"><label>% с продаж</label><input type="number" id="sf-commission" placeholder="0" min="0" max="100"></div>
+      <div class="form-group full"><label>Пароль (задаёт только админ)</label><input type="password" id="sf-password" placeholder="Пароль официанта"></div>
+      <div class="form-group full"><label>Заметки</label><input type="text" id="sf-notes" placeholder="..."></div>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal('add-staff-modal')">Отмена</button>
+      <button class="mbtn success" onclick="saveStaff()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="salary-pay-modal">
+  <div class="modal" style="max-width:400px;">
+    <h3>Выплата зарплаты</h3>
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Сотрудник</div>
+      <select id="pay-staff-select" class="form-input" style="width:100%;margin-bottom:10px;"><option value="">— Выберите —</option></select>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Сумма</div>
+      <input type="number" id="pay-amount" placeholder="0" style="width:100%;" min="0">
+      <div style="font-size:12px;color:var(--muted);margin-top:10px;margin-bottom:6px;">Комментарий</div>
+      <input type="text" id="pay-comment" placeholder="Аванс / ЗП..." style="width:100%;">
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn" onclick="closeModal('salary-pay-modal')">Отмена</button>
+      <button class="mbtn success" onclick="confirmSalaryPay()">Выплатить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-staff-modal">
+  <div class="modal" style="max-width:460px;">
+    <h3>Редактировать сотрудника</h3>
+    <input type="hidden" id="edit-sf-id">
+    <div class="form-grid" style="margin-bottom:16px;">
+      <div class="form-group full"><label>Полное имя</label><input type="text" id="edit-sf-name"></div>
+      <div class="form-group">
+        <label>Должность</label>
+        <select id="edit-sf-role" class="form-input">
+          <option value="waiter">Официант</option>
+          <option value="cook">Повар</option>
+          <option value="bartender">Бармен</option>
+          <option value="manager">Менеджер</option>
+          <option value="other">Прочее</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Оклад</label><input type="number" id="edit-sf-salary" min="0"></div>
+      <div class="form-group"><label>Телефон</label><input type="tel" id="edit-sf-phone"></div>
+      <div class="form-group"><label>Дата найма</label><input type="text" id="edit-sf-hired"></div>
+      <div class="form-group"><label>% с продаж</label><input type="number" id="edit-sf-commission" min="0" max="100"></div>
+      <div class="form-group full"><label>Пароль (пусто = не менять). Только админ</label><input type="password" id="edit-sf-password" placeholder="Новый пароль или пусто"></div>
+      <div class="form-group full"><label>Заметки</label><input type="text" id="edit-sf-notes"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn-danger-sm" onclick="fireStaff()"><i class="ti ti-user-off"></i> Уволить</button>
+      <div class="modal-btns">
+        <button class="mbtn" onclick="closeModal('edit-staff-modal')">Отмена</button>
+        <button class="mbtn success" onclick="updateStaff()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'resto_pro_v4';
+
+const DEFAULT_CATEGORIES = [
+  { id: 'salad', name: 'Салаты', emoji: '🥗' },
+  { id: 'hot', name: 'Горячее', emoji: '🍲' },
+  { id: 'pizza', name: 'Пицца', emoji: '🍕' },
+  { id: 'sushi', name: 'Суши', emoji: '🍣' },
+  { id: 'drinks', name: 'Напитки', emoji: '🥤' },
+  { id: 'dessert', name: 'Десерты', emoji: '🍰' }
+];
+
+const DEFAULT_MENU = [
+  {id:1,name:'Цезарь',cat:'salad',price:350,emoji:'🥗'},
+  {id:2,name:'Греческий',cat:'salad',price:290,emoji:'🫑'},
+  {id:3,name:'Оливье',cat:'salad',price:220,emoji:'🥙'},
+  {id:4,name:'Лагман',cat:'hot',price:380,emoji:'🍜'},
+  {id:5,name:'Манты',cat:'hot',price:320,emoji:'🥟'},
+  {id:6,name:'Шашлык',cat:'hot',price:650,emoji:'🥩'},
+  {id:7,name:'Куурдак',cat:'hot',price:450,emoji:'🍲'},
+  {id:8,name:'Маргарита',cat:'pizza',price:480,emoji:'🍕'},
+  {id:9,name:'4 сыра',cat:'pizza',price:550,emoji:'🧀'},
+  {id:10,name:'Пепперони',cat:'pizza',price:580,emoji:'🌶'},
+  {id:11,name:'Филадельфия',cat:'sushi',price:720,emoji:'🍣'},
+  {id:12,name:'Калифорния',cat:'sushi',price:680,emoji:'🍱'},
+  {id:13,name:'Дракон',cat:'sushi',price:850,emoji:'🐉'},
+  {id:14,name:'Чай',cat:'drinks',price:80,emoji:'🍵'},
+  {id:15,name:'Кофе',cat:'drinks',price:150,emoji:'☕'},
+  {id:16,name:'Сок',cat:'drinks',price:120,emoji:'🥤'},
+  {id:17,name:'Вода',cat:'drinks',price:60,emoji:'💧'},
+  {id:18,name:'Тирамису',cat:'dessert',price:280,emoji:'🍰'},
+  {id:19,name:'Мороженое',cat:'dessert',price:180,emoji:'🍦'},
+  {id:20,name:'Чизкейк',cat:'dessert',price:310,emoji:'🎂'},
+];
+
+const DEFAULT_ZONES = [
+  { id: 'hall1', name: 'Зал 1', emoji: '🏠' },
+  { id: 'hall2', name: 'Зал 2', emoji: '🏛' },
+  { id: 'terrace', name: 'Терраса', emoji: '🌿' },
+  { id: 'cabin', name: 'Кабинки', emoji: '🚪' },
+];
+
+let db = loadDB();
+
+function loadDB() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const data = JSON.parse(s);
+      if (!data.categories) data.categories = DEFAULT_CATEGORIES;
+      if (!data.menu) data.menu = DEFAULT_MENU;
+      if (!data.zones) data.zones = JSON.parse(JSON.stringify(DEFAULT_ZONES));
+      if (!data.settings) data.settings = {};
+      if (!data.settings.adminPassword) data.settings.adminPassword = 'admin';
+      if (!data.settings.tableZones) data.settings.tableZones = {};
+      return data;
+    }
+  } catch(e) {}
+  return {
+    tables: [], orders: {}, checks: [],
+    staff: [], salaryLog: [],
+    categories: DEFAULT_CATEGORIES,
+    menu: DEFAULT_MENU,
+    zones: JSON.parse(JSON.stringify(DEFAULT_ZONES)),
+    settings: {
+      currency: 'сом', tableCount: 12, restName: 'РесторанПРО',
+      adminPassword: 'admin',
+      tableZones: {}
+    }
+  };
+}
+
+function saveDB() {
+  if (!db.salaryLog) db.salaryLog = [];
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); } catch(e) {}
+}
+
+const WALLPAPERS = [
+  {label:'Нет',value:'none',bg:'#f8f5f0'},
+  {label:'Камень',value:'stone',bg:'linear-gradient(135deg,#bdc3c7,#2c3e50)'},
+  {label:'Дерево',value:'wood',bg:'linear-gradient(135deg,#c79252,#7d4e1f)'},
+  {label:'Ночь',value:'night',bg:'linear-gradient(135deg,#0f0c29,#302b63,#24243e)'},
+  {label:'Закат',value:'sunset',bg:'linear-gradient(135deg,#f093fb,#f5576c)'},
+  {label:'Море',value:'ocean',bg:'linear-gradient(135deg,#0575e6,#021b79)'},
+  {label:'Лес',value:'forest',bg:'linear-gradient(135deg,#134e5e,#71b280)'},
+  {label:'Золото',value:'gold',bg:'linear-gradient(135deg,#f7971e,#ffd200)'},
+];
+
+const ROLE_LABELS = {waiter:'Официант',cook:'Повар',bartender:'Бармен',manager:'Менеджер',other:'Прочее'};
+const AVATAR_COLORS = ['#E24B4A','#1D9E75','#0575e6','#7F77DD','#EF9F27','#D4537E','#0F6E56'];
+
+let currentTable = null;
+let activeMenuFilter = 'all';
+let staffFilter = 'all';
+let currentUser = null;
+let pendingLogin = null;
+let activeZoneFilter = 'all';
+
+function fmt(n) { return Math.round(n).toLocaleString('ru-RU') + ' ' + (db.settings.currency || 'сом'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function initials(name) {
+  const p = (name||'').trim().split(' ');
+  return (p[0]?.[0]||'') + (p[1]?.[0]||'');
+}
+function avatarColor(id) { return AVATAR_COLORS[(id||0) % AVATAR_COLORS.length]; }
+function nowTime() { return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+function nowDate() { return new Date().toLocaleDateString('ru-RU'); }
+function isAdmin() { return currentUser && currentUser.type === 'admin'; }
+function isWaiter() { return currentUser && currentUser.type === 'waiter'; }
+
+function showLobby() {
+  currentUser = null;
+  document.getElementById('header').style.display = 'none';
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('waiter-mode-bar').classList.remove('visible','admin-bar');
+  document.getElementById('waiter-lobby-view').classList.add('visible');
+  renderLobby();
+}
+
+function renderLobby() {
+  const grid = document.getElementById('lobby-grid');
+  const waiters = (db.staff || []).filter(s => s.active !== false && (s.role === 'waiter' || s.role === 'manager'));
+
+  let html = `
+    <div class="lobby-card admin-card" onclick="requestAdminLogin()">
+      <div class="lobby-lock">🔑</div>
+      <div class="lobby-avatar" style="background:var(--accent)">ADM</div>
+      <div class="lobby-name">Администратор</div>
+      <div class="lobby-role">Полный доступ · пароль</div>
+    </div>`;
+
+  if (!waiters.length) {
+    html += `<div class="lobby-empty" style="grid-column:1/-1;padding:30px 10px;">
+      Нет официантов. Войдите как админ (пароль по умолчанию: admin) и добавьте в «Персонал».
+    </div>`;
+  } else {
+    html += waiters.map(w => {
+      let myTables = 0;
+      Object.keys(db.orders || {}).forEach(tid => {
+        const ord = db.orders[tid];
+        if (ord && ord.waiterId == w.id && Array.isArray(ord) && ord.length > 0) myTables++;
+      });
+      return `
+        <div class="lobby-card" onclick="requestWaiterLogin(${w.id})">
+          <div class="lobby-lock">🔒</div>
+          <div class="lobby-avatar" style="background:${avatarColor(w.id)}">${initials(w.name)}</div>
+          <div class="lobby-name">${w.name}</div>
+          <div class="lobby-role">${ROLE_LABELS[w.role] || w.role}</div>
+          ${myTables > 0 ? `<div class="lobby-tables-count">🪑 ${myTables} стол.</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+  grid.innerHTML = html;
+}
+
+function requestAdminLogin() {
+  pendingLogin = { type: 'admin' };
+  document.getElementById('pwd-modal-title').textContent = 'Вход администратора';
+  document.getElementById('pwd-modal-name').textContent = 'Введите пароль админа';
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('pwd-error').style.display = 'none';
+  openModal('password-modal');
+  setTimeout(() => document.getElementById('pwd-input').focus(), 80);
+}
+
+function requestWaiterLogin(staffId) {
+  const s = (db.staff || []).find(x => x.id === staffId);
+  if (!s) return;
+  pendingLogin = { type: 'waiter', staffId };
+  document.getElementById('pwd-modal-title').textContent = 'Вход официанта';
+  document.getElementById('pwd-modal-name').textContent = s.name;
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('pwd-error').style.display = 'none';
+  openModal('password-modal');
+  setTimeout(() => document.getElementById('pwd-input').focus(), 80);
+}
+
+function confirmPasswordLogin() {
+  const entered = document.getElementById('pwd-input').value;
+  if (!pendingLogin) { closeModal('password-modal'); return; }
+
+  if (pendingLogin.type === 'admin') {
+    const adminPwd = db.settings.adminPassword || 'admin';
+    if (entered !== adminPwd) {
+      document.getElementById('pwd-error').textContent = 'Неверный пароль администратора';
+      document.getElementById('pwd-error').style.display = 'block';
+      document.getElementById('pwd-input').value = '';
+      document.getElementById('pwd-input').focus();
+      return;
+    }
+    closeModal('password-modal');
+    loginAsAdmin();
+    return;
+  }
+
+  const s = (db.staff || []).find(x => x.id === pendingLogin.staffId);
+  if (!s) { closeModal('password-modal'); return; }
+  if (!s.password) {
+    document.getElementById('pwd-error').textContent = 'Пароль не задан. Только админ может установить.';
+    document.getElementById('pwd-error').style.display = 'block';
+    return;
+  }
+  if (entered !== s.password) {
+    document.getElementById('pwd-error').textContent = 'Неверный пароль';
+    document.getElementById('pwd-error').style.display = 'block';
+    document.getElementById('pwd-input').value = '';
+    document.getElementById('pwd-input').focus();
+    return;
+  }
+  closeModal('password-modal');
+  loginAsWaiter(s);
+}
+
+function loginAsAdmin() {
+  currentUser = { type: 'admin' };
+  document.getElementById('waiter-lobby-view').classList.remove('visible');
+  document.getElementById('header').style.display = 'flex';
+  document.getElementById('main').style.display = 'flex';
+  const bar = document.getElementById('waiter-mode-bar');
+  bar.classList.add('visible', 'admin-bar');
+  document.getElementById('wm-name').textContent = 'Администратор';
+  document.getElementById('wm-role').textContent = 'Полный доступ';
+  document.getElementById('wm-avatar').textContent = 'A';
+  document.getElementById('wm-avatar').style.background = 'rgba(255,255,255,0.3)';
+  updateAccessUI();
+  switchTab('tables');
+  showToast('Вход администратора');
+}
+
+function loginAsWaiter(s) {
+  currentUser = { type: 'waiter', id: s.id, name: s.name, role: s.role };
+  document.getElementById('waiter-lobby-view').classList.remove('visible');
+  document.getElementById('header').style.display = 'flex';
+  document.getElementById('main').style.display = 'flex';
+  const bar = document.getElementById('waiter-mode-bar');
+  bar.classList.add('visible');
+  bar.classList.remove('admin-bar');
+  document.getElementById('wm-name').textContent = s.name;
+  document.getElementById('wm-role').textContent = ROLE_LABELS[s.role] || s.role;
+  document.getElementById('wm-avatar').textContent = initials(s.name);
+  document.getElementById('wm-avatar').style.background = avatarColor(s.id);
+  updateAccessUI();
+  switchTab('tables');
+  showToast('Добро пожаловать, ' + s.name.split(' ')[0] + '!');
+}
+
+function adminEnterAsWaiter(staffId) {
+  if (!isAdmin()) return;
+  const s = (db.staff || []).find(x => x.id === staffId);
+  if (!s) return;
+  currentUser = { type: 'waiter', id: s.id, name: s.name, role: s.role, viaAdmin: true };
+  const bar = document.getElementById('waiter-mode-bar');
+  bar.classList.add('visible');
+  bar.classList.remove('admin-bar');
+  document.getElementById('wm-name').textContent = s.name + ' (от админа)';
+  document.getElementById('wm-role').textContent = ROLE_LABELS[s.role] || s.role;
+  document.getElementById('wm-avatar').textContent = initials(s.name);
+  document.getElementById('wm-avatar').style.background = avatarColor(s.id);
+  updateAccessUI();
+  switchTab('tables');
+  showToast('Режим официанта: ' + s.name);
+}
+
+function logoutToLobby() {
+  currentUser = null;
+  showLobby();
+  showToast('Вы вышли в лобби');
+}
+
+function updateAccessUI() {
+  const admin = isAdmin();
+  const waiter = isWaiter();
+  document.getElementById('tab-staff').style.display = admin ? '' : 'none';
+  document.getElementById('tab-reports').style.display = admin ? '' : 'none';
+  document.getElementById('tab-settings').style.display = admin ? '' : 'none';
+  document.getElementById('btn-add-staff').style.display = admin ? '' : 'none';
+  const selWrap = document.getElementById('waiter-select-wrap');
+  if (selWrap) selWrap.style.display = admin ? '' : 'none';
+  const myHeader = document.getElementById('my-tables-header');
+  const hint = document.getElementById('tables-hint');
+  if (myHeader) myHeader.style.display = waiter ? 'flex' : 'none';
+  if (hint) {
+    if (waiter) hint.textContent = 'Зелёные — ваши. 🔒 — чужие. Свободные можно взять.';
+    else hint.textContent = 'Админ видит все столы. Фильтр по зонам сверху.';
+  }
+  renderZoneTabs();
+  renderTables();
+}
+
+function renderZoneTabs() {
+  const el = document.getElementById('zone-tabs');
+  if (!el) return;
+  const zones = db.zones || [];
+  let html = `<button class="zone-tab ${activeZoneFilter==='all'?'active':''}" onclick="setZoneFilter('all')">Все</button>`;
+  zones.forEach(z => {
+    html += `<button class="zone-tab ${activeZoneFilter===z.id?'active':''}" onclick="setZoneFilter('${z.id}')">${z.emoji||'🏠'} ${z.name}</button>`;
+  });
+  el.innerHTML = html;
+}
+
+function setZoneFilter(zid) {
+  activeZoneFilter = zid;
+  renderZoneTabs();
+  renderTables();
+}
+
+function addZone() {
+  if (!isAdmin()) { showToast('Только админ'); return; }
+  const name = document.getElementById('new-zone-name').value.trim();
+  const emoji = document.getElementById('new-zone-emoji').value.trim() || '🏠';
+  if (!name) { showToast('Введите название зоны'); return; }
+  if (!db.zones) db.zones = [];
+  db.zones.push({ id: 'zone_' + Date.now(), name, emoji });
+  saveDB();
+  document.getElementById('new-zone-name').value = '';
+  renderZonesManage();
+  renderZoneTabs();
+  renderTablesZoneAssign();
+  showToast('Зона добавлена');
+}
+
+function removeZone(id) {
+  if (!isAdmin()) return;
+  if (!confirm('Удалить зону?')) return;
+  db.zones = (db.zones || []).filter(z => z.id !== id);
+  if (db.settings.tableZones) {
+    Object.keys(db.settings.tableZones).forEach(tid => {
+      if (db.settings.tableZones[tid] === id) delete db.settings.tableZones[tid];
+    });
+  }
+  if (activeZoneFilter === id) activeZoneFilter = 'all';
+  saveDB();
+  renderZonesManage();
+  renderZoneTabs();
+  renderTablesZoneAssign();
+  renderTables();
+  showToast('Зона удалена');
+}
+
+function renderZonesManage() {
+  const list = document.getElementById('zones-manage-list');
+  if (!list) return;
+  const zones = db.zones || [];
+  if (!zones.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--muted);">Нет зон</div>';
+    return;
+  }
+  list.innerHTML = zones.map(z => `
+    <div class="zone-manage-item">
+      <span>${z.emoji||'🏠'} <b>${z.name}</b></span>
+      <button class="btn-danger-sm" onclick="removeZone('${z.id}')"><i class="ti ti-trash"></i></button>
+    </div>
+  `).join('');
+}
+
+function renderTablesZoneAssign() {
+  const box = document.getElementById('tables-zone-assign');
+  if (!box) return;
+  const count = parseInt(document.getElementById('table-count').value) || (db.settings.tableCount || 12);
+  const zones = db.zones || [];
+  if (!db.settings.tableZones) db.settings.tableZones = {};
+  let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Привязка столов к зонам:</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;">';
+  for (let i = 1; i <= count; i++) {
+    const cur = db.settings.tableZones[i] || '';
+    html += `<div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+      <span style="min-width:28px;">№${i}</span>
+      <select class="form-input" style="flex:1;padding:4px 6px;font-size:12px;" onchange="setTableZone(${i},this.value)">
+        <option value="">— нет —</option>
+        ${zones.map(z => `<option value="${z.id}" ${cur===z.id?'selected':''}>${z.emoji||''} ${z.name}</option>`).join('')}
+      </select>
+    </div>`;
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function setTableZone(tableId, zoneId) {
+  if (!db.settings.tableZones) db.settings.tableZones = {};
+  if (zoneId) db.settings.tableZones[tableId] = zoneId;
+  else delete db.settings.tableZones[tableId];
+  saveDB();
+}
+
+function getTableZone(tableId) {
+  return (db.settings.tableZones || {})[tableId] || null;
+}
+
+function initTables() {
+  const count = db.settings.tableCount || 12;
+  db.tables = [];
+  for (let i = 1; i <= count; i++) {
+    db.tables.push({ id: i });
+    if (!db.orders[i]) db.orders[i] = [];
+  }
+  renderTables();
+}
+
+function canOpenTable(tableId) {
+  if (isAdmin()) return true;
+  if (!isWaiter()) return false;
+  const ord = db.orders[tableId] || [];
+  const occupied = Array.isArray(ord) && ord.length > 0;
+  if (!occupied) return true;
+  if (ord.waiterId == currentUser.id) return true;
+  return false;
+}
+
+function renderTables() {
+  const g = document.getElementById('tables-grid');
+  if (!g) return;
+  g.innerHTML = '';
+  let myActiveCount = 0;
+  const zones = db.zones || [];
+  let list = db.tables || [];
+  if (activeZoneFilter !== 'all') {
+    list = list.filter(t => getTableZone(t.id) === activeZoneFilter);
+  }
+  if (!list.length) {
+    g.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted);font-size:13px;">В этой зоне нет столов</div>';
+    return;
+  }
+  list.forEach(t => {
+    const ord = db.orders[t.id] || [];
+    const sum = Array.isArray(ord) ? ord.reduce((s,x)=>s+x.price*x.qty,0) : 0;
+    const occupied = Array.isArray(ord) && ord.length > 0;
+    const isMy = isWaiter() && ord.waiterId == currentUser.id;
+    const isLocked = isWaiter() && occupied && !isMy;
+    if (isMy && occupied) myActiveCount++;
+    let cls = 'table-card';
+    if (occupied) cls += ' occupied';
+    if (isMy) cls += ' my-table';
+    if (isLocked) cls += ' locked';
+    const d = document.createElement('div');
+    d.className = cls;
+    d.onclick = isLocked ? () => showToast('Стол занят другим официантом') : () => openTable(t.id);
+    const waiterName = ord.waiterName || '';
+    const zone = zones.find(z => z.id === getTableZone(t.id));
+    let icon = '⬜';
+    if (isLocked) icon = '🔒';
+    else if (isMy) icon = '🟢';
+    else if (occupied) icon = '🪑';
+    d.innerHTML = `
+      <div style="font-size:22px">${icon}</div>
+      <div class="table-num">${t.id}</div>
+      <div class="table-status">${occupied ? (isLocked ? 'Чужой' : 'Занят') : 'Свободен'}</div>
+      ${zone ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;">${zone.emoji||''} ${zone.name}</div>` : ''}
+      ${waiterName ? `<div style="font-size:10px;color:${isLocked?'var(--muted)':'var(--accent2)'};margin-top:2px;">${waiterName}</div>` : ''}
+      ${sum > 0 && !isLocked ? `<div class="table-sum">${fmt(sum)}</div>` : ''}
+      ${isLocked && sum > 0 ? `<div class="table-sum" style="color:var(--muted)">••••</div>` : ''}
+    `;
+    g.appendChild(d);
+  });
+  const cntEl = document.getElementById('my-tables-count');
+  if (cntEl) cntEl.textContent = myActiveCount + ' активных';
+}
+
+function openTable(id) {
+  if (!canOpenTable(id)) { showToast('Стол занят другим официантом'); return; }
+  currentTable = id;
+  document.getElementById('order-table-label').textContent = 'Стол №' + id;
+  document.getElementById('order-table-num').textContent = '№' + id;
+  document.getElementById('order-time-label').textContent = nowTime();
+  if (!db.orders[id]) db.orders[id] = [];
+  if (isWaiter() && !db.orders[id].waiterId) {
+    db.orders[id].waiterId = currentUser.id;
+    db.orders[id].waiterName = currentUser.name;
+    saveDB();
+  }
+  populateWaiterSelect();
+  renderMenu(activeMenuFilter);
+  renderOrderItems();
+  switchTab('order');
+}
+
+function initUIElements() {
+  renderCategoriesUI();
+  renderMenuManagement();
+  renderMenu(activeMenuFilter);
+  renderZonesManage();
+  renderTablesZoneAssign();
+}
+
+function renderCategoriesUI() {
+  const sb = document.getElementById('sidebar-cats');
+  let sbHtml = `<div class="cat-btn ${activeMenuFilter==='all'?'active':''}" onclick="selectCat(this,'all')"><span>📋</span> Всё меню</div>`;
+  (db.categories||[]).forEach(c => {
+    sbHtml += `<div class="cat-btn ${activeMenuFilter===c.id?'active':''}" onclick="selectCat(this,'${c.id}')"><span>${c.emoji||'🍽'}</span> ${c.name}</div>`;
+  });
+  sb.innerHTML = sbHtml;
+  const oct = document.getElementById('order-cat-tabs');
+  let octHtml = `<button class="mct ${activeMenuFilter==='all'?'active':''}" onclick="filterMenu('all',this)">Все</button>`;
+  (db.categories||[]).forEach(c => {
+    octHtml += `<button class="mct ${activeMenuFilter===c.id?'active':''}" onclick="filterMenu('${c.id}',this)">${c.emoji||'🍽'} ${c.name}</button>`;
+  });
+  oct.innerHTML = octHtml;
+  const sel = document.getElementById('new-item-cat');
+  if (sel) sel.innerHTML = (db.categories||[]).map(c => `<option value="${c.id}">${c.emoji||''} ${c.name}</option>`).join('');
+  const list = document.getElementById('categories-manage-list');
+  if (!list) return;
+  if (!(db.categories||[]).length) list.innerHTML = '<div style="font-size:12px;color:var(--muted);">Нет категорий</div>';
+  else list.innerHTML = db.categories.map(c => `
+    <div class="manage-item"><span>${c.emoji||'🍽'} <b>${c.name}</b></span>
+    <button class="btn-danger-sm" onclick="removeCategory('${c.id}')"><i class="ti ti-trash"></i></button></div>`).join('');
+}
+
+function addCategory() {
+  if (!isAdmin()) return;
+  const name = document.getElementById('new-cat-name').value.trim();
+  const emoji = document.getElementById('new-cat-emoji').value.trim() || '🍽';
+  if (!name) { showToast('Введите название'); return; }
+  db.categories.push({ id: 'cat_' + Date.now(), name, emoji });
+  saveDB();
+  document.getElementById('new-cat-name').value = '';
+  document.getElementById('new-cat-emoji').value = '';
+  renderCategoriesUI();
+  showToast('Категория добавлена');
+}
+
+function removeCategory(id) {
+  if (!isAdmin()) return;
+  if (!confirm('Удалить категорию и блюда?')) return;
+  db.categories = db.categories.filter(c => c.id !== id);
+  db.menu = db.menu.filter(m => m.cat !== id);
+  saveDB();
+  renderCategoriesUI();
+  renderMenuManagement();
+  renderMenu('all');
+  showToast('Удалено');
+}
+
+function renderMenuManagement() {
+  const list = document.getElementById('menu-manage-list');
+  if (!list) return;
+  if (!(db.menu||[]).length) { list.innerHTML = '<div style="font-size:12px;color:var(--muted);">Меню пусто</div>'; return; }
+  list.innerHTML = db.menu.map(m => {
+    const cat = (db.categories||[]).find(c => c.id === m.cat);
+    return `<div class="manage-item"><span>${m.emoji||'🍽'} <b>${m.name}</b> — ${fmt(m.price)} <small style="color:var(--muted)">(${cat?cat.name:'?'})</small></span>
+    <button class="btn-danger-sm" onclick="removeMenuItem(${m.id})"><i class="ti ti-trash"></i></button></div>`;
+  }).join('');
+}
+
+function addMenuItem() {
+  if (!isAdmin()) return;
+  const name = document.getElementById('new-item-name').value.trim();
+  const cat = document.getElementById('new-item-cat').value;
+  const price = parseFloat(document.getElementById('new-item-price').value);
+  const emoji = document.getElementById('new-item-emoji').value.trim() || '🍽';
+  if (!name || isNaN(price) || price <= 0 || !cat) { showToast('Заполните поля'); return; }
+  const newId = db.menu.length ? Math.max(...db.menu.map(m => m.id)) + 1 : 1;
+  db.menu.push({ id: newId, name, cat, price, emoji });
+  saveDB();
+  document.getElementById('new-item-name').value = '';
+  document.getElementById('new-item-price').value = '';
+  document.getElementById('new-item-emoji').value = '';
+  renderMenuManagement();
+  renderMenu(activeMenuFilter);
+  showToast('Блюдо добавлено');
+}
+
+function removeMenuItem(id) {
+  if (!isAdmin()) return;
+  db.menu = db.menu.filter(m => m.id !== id);
+  saveDB();
+  renderMenuManagement();
+  renderMenu(activeMenuFilter);
+  showToast('Удалено');
+}
+
+function renderMenu(cat) {
+  const g = document.getElementById('menu-grid');
+  const items = cat === 'all' ? db.menu : db.menu.filter(x => x.cat === cat);
+  if (!items.length) {
+    g.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Нет блюд</div>`;
+    return;
+  }
+  g.innerHTML = items.map(m => `
+    <div class="menu-item" onclick="addItem(${m.id})">
+      <div class="mi-emoji">${m.emoji||'🍽'}</div>
+      <div class="mi-name">${m.name}</div>
+      <div class="mi-price">${fmt(m.price)}</div>
+    </div>`).join('');
+}
+
+function filterMenu(cat, btn) {
+  activeMenuFilter = cat;
+  document.querySelectorAll('#order-cat-tabs .mct').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderMenu(cat);
+}
+
+function selectCat(el, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  activeMenuFilter = cat;
+  renderMenu(cat);
+}
+
+function addItem(id) {
+  if (!currentTable) { showToast('Выберите стол'); return; }
+  if (!canOpenTable(currentTable)) { showToast('Нет доступа'); return; }
+  const m = db.menu.find(x => x.id === id);
+  const ord = db.orders[currentTable];
+  const ex = ord.find(x => x.id === id);
+  if (ex) ex.qty++;
+  else ord.push({ id: m.id, name: m.name, price: m.price, qty: 1, emoji: m.emoji });
+  if (isWaiter() && !ord.waiterId) {
+    ord.waiterId = currentUser.id;
+    ord.waiterName = currentUser.name;
+  }
+  renderOrderItems(); renderTables(); saveDB();
+}
+
+function changeQty(id, delta) {
+  if (!canOpenTable(currentTable)) return;
+  const ord = db.orders[currentTable];
+  const ex = ord.find(x => x.id === id);
+  if (!ex) return;
+  ex.qty += delta;
+  if (ex.qty <= 0) ord.splice(ord.indexOf(ex), 1);
+  renderOrderItems(); renderTables(); saveDB();
+}
+
+function removeItem(id) {
+  if (!canOpenTable(currentTable)) return;
+  const ord = db.orders[currentTable];
+  ord.splice(ord.findIndex(x => x.id === id), 1);
+  renderOrderItems(); renderTables(); saveDB();
+  showToast('Удалено');
+}
+
+function recalc() {
+  const ord = currentTable ? (db.orders[currentTable] || []) : [];
+  const sub = Array.isArray(ord) ? ord.reduce((s, x) => s + x.price * x.qty, 0) : 0;
+  const disc = Math.max(0, Math.min(100, parseFloat(document.getElementById('discount-input').value) || 0));
+  const discAmt = sub * disc / 100;
+  const total = sub - discAmt;
+  document.getElementById('subtotal').textContent = fmt(sub);
+  document.getElementById('discount-line').textContent = '−' + fmt(discAmt);
+  document.getElementById('total-price').textContent = fmt(total);
+  return { sub, discAmt, total, disc };
+}
+
+function renderOrderItems() {
+  const ord = currentTable ? (db.orders[currentTable] || []) : [];
+  const c = document.getElementById('order-items');
+  if (!Array.isArray(ord) || !ord.length) {
+    c.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:13px;">Добавьте блюда</div>';
+    recalc(); return;
+  }
+  c.innerHTML = ord.map(x => `
+    <div class="order-item">
+      <span style="font-size:18px">${x.emoji||'🍽'}</span>
+      <span class="oi-name">${x.name}</span>
+      <div class="oi-qty">
+        <button class="qty-btn" onclick="changeQty(${x.id},-1)">−</button>
+        <span style="font-size:13px;min-width:18px;text-align:center">${x.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${x.id},1)">+</button>
+      </div>
+      <span class="oi-price">${fmt(x.price*x.qty)}</span>
+      <button class="cancel-item" onclick="removeItem(${x.id})"><i class="ti ti-x"></i></button>
+    </div>`).join('');
+  recalc();
+}
+
+function populateWaiterSelect() {
+  const sel = document.getElementById('waiter-select');
+  const waiters = (db.staff || []).filter(s => s.active && (s.role === 'waiter' || s.role === 'manager'));
+  sel.innerHTML = '<option value="">— Без официанта —</option>' +
+    waiters.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+  const ord = db.orders[currentTable];
+  if (isWaiter()) {
+    sel.value = currentUser.id;
+    if (ord) { ord.waiterId = currentUser.id; ord.waiterName = currentUser.name; }
+  } else if (ord && ord.waiterId) sel.value = ord.waiterId;
+  sel.onchange = () => {
+    if (db.orders[currentTable]) {
+      db.orders[currentTable].waiterId = sel.value;
+      db.orders[currentTable].waiterName = sel.options[sel.selectedIndex].text;
+      document.getElementById('order-waiter-label').textContent = sel.value ? '👤 ' + sel.options[sel.selectedIndex].text : '';
+    }
+    saveDB();
+  };
+  const lbl = document.getElementById('order-waiter-label');
+  if (isWaiter()) lbl.textContent = '👤 ' + currentUser.name;
+  else lbl.textContent = ord && ord.waiterId ? '👤 ' + (waiters.find(w => w.id == ord.waiterId)?.name || '') : '';
+}
+
+function payCheck() {
+  if (!currentTable) { showToast('Выберите стол'); return; }
+  if (!canOpenTable(currentTable)) { showToast('Нет доступа'); return; }
+  const ord = db.orders[currentTable] || [];
+  if (!ord.length) { showToast('Пустой заказ'); return; }
+  const { total, disc } = recalc();
+  const waiterName = ord.waiterName || (isWaiter() ? currentUser.name : '');
+  document.getElementById('pay-modal-text').textContent =
+    `Стол №${currentTable}${waiterName ? ' · ' + waiterName : ''} · ${fmt(total)}${disc > 0 ? ' (скидка ' + disc + '%)' : ''}`;
+  openModal('pay-modal');
+}
+
+let lastPaidCheck = null;
+
+function confirmPay(doPrint) {
+  const { sub, discAmt, total, disc } = recalc();
+  const ord = db.orders[currentTable] || [];
+  if (!db.checks) db.checks = [];
+  const guests = parseInt(document.getElementById('guests-input').value) || 1;
+  const check = {
+    id: db.checks.length + 1, table: currentTable,
+    items: JSON.parse(JSON.stringify(ord)),
+    waiterId: ord.waiterId || (isWaiter() ? currentUser.id : null),
+    waiterName: ord.waiterName || (isWaiter() ? currentUser.name : ''),
+    guests, sub, discAmt, total, disc, time: nowTime(), date: nowDate(), status: 'paid'
+  };
+  db.checks.push(check);
+  lastPaidCheck = check;
+  db.orders[currentTable] = [];
+  document.getElementById('discount-input').value = 0;
+  document.getElementById('guests-input').value = 1;
+  closeModal('pay-modal');
+  renderOrderItems(); renderTables(); updateReports(); saveDB();
+  showToast('✓ Оплачено ' + fmt(total));
+  if (doPrint) {
+    printCheck(check);
+  } else {
+    document.getElementById('paid-modal-text').textContent = `Стол №${check.table} · ${fmt(total)}`;
+    openModal('paid-modal');
+  }
+}
+
+function buildReceiptHTML(check) {
+  const restName = db.settings.restName || 'РесторанПРО';
+  const items = (check.items || []).map(i =>
+    `<div class="row"><span>${i.name} ×${i.qty}</span><span>${fmt(i.price * i.qty)}</span></div>`
+  ).join('');
+  return `
+    <div class="receipt-box">
+      <h2>${restName}</h2>
+      <div class="center">${check.status === 'pre' ? 'ПРЕДЧЕК' : 'Чек №' + check.id}</div>
+      <div class="center">${check.date} ${check.time}</div>
+      <div class="center">Стол №${check.table}${check.waiterName ? ' · ' + check.waiterName : ''}${check.guests ? ' · ' + check.guests + ' гост.' : ''}</div>
+      <div class="line"></div>
+      ${items}
+      <div class="line"></div>
+      <div class="row"><span>Сумма</span><span>${fmt(check.sub || 0)}</span></div>
+      ${(check.discAmt > 0) ? `<div class="row"><span>Скидка ${check.disc || 0}%</span><span>−${fmt(check.discAmt)}</span></div>` : ''}
+      <div class="row total"><span>ИТОГО</span><span>${fmt(check.total)}</span></div>
+      <div class="line"></div>
+      <div class="center">Спасибо за визит!</div>
+      <div class="center" style="font-size:11px;margin-top:6px;">РесторанПРО</div>
+    </div>`;
+}
+
+function printCheck(check) {
+  if (!check) { showToast('Нет данных чека'); return; }
+  const area = document.getElementById('print-area');
+  area.innerHTML = buildReceiptHTML(check);
+  area.style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 400);
+  }, 100);
+}
+
+function printLastCheck() {
+  closeModal('paid-modal');
+  if (lastPaidCheck) printCheck(lastPaidCheck);
+}
+
+function printPreCheck() {
+  if (!currentTable) { showToast('Выберите стол'); return; }
+  const ord = db.orders[currentTable] || [];
+  if (!ord.length) { showToast('Заказ пуст'); return; }
+  const { sub, discAmt, total, disc } = recalc();
+  const guests = parseInt(document.getElementById('guests-input').value) || 1;
+  const pre = {
+    id: 'PRE',
+    table: currentTable,
+    items: ord,
+    waiterName: ord.waiterName || (isWaiter() ? currentUser.name : ''),
+    guests, sub, discAmt, total, disc,
+    time: nowTime(), date: nowDate(), status: 'pre'
+  };
+  printCheck(pre);
+}
+
+function printCheckById(id) {
+  const check = (db.checks || []).find(c => c.id === id);
+  if (check) printCheck(check);
+  else showToast('Чек не найден');
+}
+
+function printDailyReport() {
+  const paid = (db.checks || []).filter(c => c.status === 'paid');
+  const rev = paid.reduce((s, c) => s + c.total, 0);
+  const disc = paid.reduce((s, c) => s + (c.discAmt || 0), 0);
+  const restName = db.settings.restName || 'РесторанПРО';
+  const rows = paid.map(c =>
+    `<div class="row"><span>${c.time} Стол ${c.table}</span><span>${fmt(c.total)}</span></div>`
+  ).join('');
+  const area = document.getElementById('print-area');
+  area.innerHTML = `
+    <div class="receipt-box" style="max-width:360px;">
+      <h2>${restName}</h2>
+      <div class="center"><b>Отчёт за день</b></div>
+      <div class="center">${nowDate()} ${nowTime()}</div>
+      <div class="line"></div>
+      ${rows || '<div class="center">Нет оплат</div>'}
+      <div class="line"></div>
+      <div class="row"><span>Чеков</span><span>${paid.length}</span></div>
+      <div class="row"><span>Скидки</span><span>${fmt(disc)}</span></div>
+      <div class="row total"><span>Выручка</span><span>${fmt(rev)}</span></div>
+      <div class="line"></div>
+      <div class="center">РесторанПРО</div>
+    </div>`;
+  area.style.display = 'block';
+  setTimeout(() => {
+    window.print();
+    setTimeout(() => { area.style.display = 'none'; area.innerHTML = ''; }, 400);
+  }, 100);
+}
+
+function openCancelModal() {
+  if (!currentTable || !canOpenTable(currentTable)) return;
+  if (!(db.orders[currentTable] || []).length) { showToast('Пусто'); return; }
+  openModal('cancel-modal');
+}
+
+function cancelCheck() {
+  const ord = db.orders[currentTable] || [];
+  const sub = Array.isArray(ord) ? ord.reduce((s, x) => s + x.price * x.qty, 0) : 0;
+  if (!db.checks) db.checks = [];
+  db.checks.push({
+    id: db.checks.length + 1, table: currentTable,
+    items: JSON.parse(JSON.stringify(ord)),
+    waiterId: ord.waiterId || (isWaiter() ? currentUser.id : null),
+    waiterName: ord.waiterName || (isWaiter() ? currentUser.name : ''),
+    sub, discAmt: 0, total: sub, disc: 0, time: nowTime(), date: nowDate(), status: 'canceled'
+  });
+  db.orders[currentTable] = [];
+  document.getElementById('discount-input').value = 0;
+  closeModal('cancel-modal');
+  renderOrderItems(); renderTables(); updateReports(); saveDB();
+  showToast('Чек отменён');
+}
+
+function filterStaff(filter, btn) {
+  staffFilter = filter;
+  document.querySelectorAll('.staff-filter-tabs .mct').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderStaff();
+}
+
+function renderStaff() {
+  if (!isAdmin()) return;
+  if (!db.staff) db.staff = [];
+  const list = staffFilter === 'all' ? db.staff : db.staff.filter(s => s.role === staffFilter);
+  const grid = document.getElementById('staff-grid');
+  const active = db.staff.filter(s => s.active !== false);
+  const totalSalary = active.reduce((s, e) => s + (e.salary || 0), 0);
+  document.getElementById('staff-summary').textContent = `Активных: ${active.length} · Фонд ЗП: ${fmt(totalSalary)}/мес`;
+  document.getElementById('sidebar-staff-count').textContent = active.length;
+  if (!list.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">Нет сотрудников</div>';
+    renderShiftLog(); return;
+  }
+  grid.innerHTML = list.map(s => {
+    const earned = calcEarned(s.id);
+    const paid = calcPaid(s.id);
+    const hasPwd = s.password ? '🔒 пароль задан' : '⚠️ нет пароля';
+    return `
+    <div class="staff-card">
+      <div class="staff-status ${s.active===false?'ss-inactive':'ss-active'}"></div>
+      <div class="staff-avatar" style="background:${avatarColor(s.id)}">${initials(s.name)}</div>
+      <div class="staff-name">${s.name}</div>
+      <div class="staff-role">${ROLE_LABELS[s.role]||s.role} · ${hasPwd}</div>
+      ${s.phone?`<div style="font-size:11px;color:var(--muted);margin-top:4px;">📞 ${s.phone}</div>`:''}
+      <div class="staff-salary">Оклад: ${fmt(s.salary||0)}/мес</div>
+      <div class="staff-earned">Заработал: ${fmt(earned)} · Выплачено: ${fmt(paid)}</div>
+      <div class="staff-actions">
+        <button class="btn-outline" style="font-size:12px;padding:4px 10px;" onclick="openEditStaff(${s.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn-outline" style="font-size:12px;padding:4px 10px;" onclick="openPayModalFor(${s.id})"><i class="ti ti-cash"></i></button>
+        ${(s.role==='waiter'||s.role==='manager') && s.active!==false ? `
+        <button class="btn-outline" style="font-size:12px;padding:4px 10px;" onclick="adminEnterAsWaiter(${s.id})" title="Войти без пароля">
+          <i class="ti ti-login"></i> Войти
+        </button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  renderShiftLog();
+}
+
+function calcEarned(staffId) {
+  const s = (db.staff || []).find(x => x.id === staffId);
+  if (!s) return 0;
+  const paid = (db.checks || []).filter(c => c.status === 'paid' && c.waiterId == staffId);
+  return (s.salary || 0) + paid.reduce((sum, c) => sum + c.total, 0) * ((s.commission || 0) / 100);
+}
+function calcPaid(staffId) {
+  return ((db.salaryLog || []).filter(l => l.staffId === staffId)).reduce((s, l) => s + (l.amount || 0), 0);
+}
+
+function openAddStaffModal() {
+  if (!isAdmin()) { showToast('Только администратор может добавлять сотрудников'); return; }
+  ['sf-name','sf-phone','sf-hired','sf-notes','sf-password'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('sf-salary').value = '';
+  document.getElementById('sf-commission').value = '';
+  document.getElementById('sf-role').value = 'waiter';
+  openModal('add-staff-modal');
+}
+
+function saveStaff() {
+  if (!isAdmin()) return;
+  const name = document.getElementById('sf-name').value.trim();
+  if (!name) { showToast('Введите имя'); return; }
+  const role = document.getElementById('sf-role').value;
+  const password = document.getElementById('sf-password').value;
+  if ((role === 'waiter' || role === 'manager') && !password) {
+    showToast('Для официанта/менеджера задайте пароль');
+    return;
+  }
+  if (!db.staff) db.staff = [];
+  const newId = db.staff.length ? Math.max(...db.staff.map(s => s.id)) + 1 : 1;
+  db.staff.push({
+    id: newId, name, role,
+    salary: parseFloat(document.getElementById('sf-salary').value) || 0,
+    phone: document.getElementById('sf-phone').value.trim(),
+    hired: document.getElementById('sf-hired').value.trim(),
+    commission: parseFloat(document.getElementById('sf-commission').value) || 0,
+    notes: document.getElementById('sf-notes').value.trim(),
+    password: password || '',
+    active: true, createdAt: nowDate()
+  });
+  closeModal('add-staff-modal');
+  saveDB(); renderStaff(); updateReports();
+  showToast('Сотрудник добавлен');
+}
+
+function openEditStaff(id) {
+  if (!isAdmin()) return;
+  const s = (db.staff || []).find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('edit-sf-id').value = id;
+  document.getElementById('edit-sf-name').value = s.name;
+  document.getElementById('edit-sf-role').value = s.role;
+  document.getElementById('edit-sf-salary').value = s.salary || 0;
+  document.getElementById('edit-sf-phone').value = s.phone || '';
+  document.getElementById('edit-sf-hired').value = s.hired || '';
+  document.getElementById('edit-sf-commission').value = s.commission || 0;
+  document.getElementById('edit-sf-notes').value = s.notes || '';
+  document.getElementById('edit-sf-password').value = '';
+  openModal('edit-staff-modal');
+}
+
+function updateStaff() {
+  if (!isAdmin()) return;
+  const id = parseInt(document.getElementById('edit-sf-id').value);
+  const s = (db.staff || []).find(x => x.id === id);
+  if (!s) return;
+  const name = document.getElementById('edit-sf-name').value.trim();
+  if (!name) { showToast('Введите имя'); return; }
+  s.name = name;
+  s.role = document.getElementById('edit-sf-role').value;
+  s.salary = parseFloat(document.getElementById('edit-sf-salary').value) || 0;
+  s.phone = document.getElementById('edit-sf-phone').value.trim();
+  s.hired = document.getElementById('edit-sf-hired').value.trim();
+  s.commission = parseFloat(document.getElementById('edit-sf-commission').value) || 0;
+  s.notes = document.getElementById('edit-sf-notes').value.trim();
+  const newPwd = document.getElementById('edit-sf-password').value;
+  if (newPwd) s.password = newPwd;
+  closeModal('edit-staff-modal');
+  saveDB(); renderStaff(); updateReports();
+  showToast('Сохранено');
+}
+
+function fireStaff() {
+  if (!isAdmin()) return;
+  const id = parseInt(document.getElementById('edit-sf-id').value);
+  const s = (db.staff || []).find(x => x.id === id);
+  if (!s) return;
+  s.active = false;
+  if (!db.salaryLog) db.salaryLog = [];
+  db.salaryLog.push({ staffId: id, staffName: s.name, amount: 0, comment: 'Уволен', date: nowDate(), time: nowTime() });
+  closeModal('edit-staff-modal');
+  saveDB(); renderStaff(); updateReports();
+  showToast(s.name + ' уволен(а)');
+}
+
+function openPayModal() {
+  if (!isAdmin()) return;
+  const sel = document.getElementById('pay-staff-select');
+  sel.innerHTML = '<option value="">— Выберите —</option>' +
+    (db.staff || []).filter(s => s.active !== false).map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  document.getElementById('pay-amount').value = '';
+  document.getElementById('pay-comment').value = '';
+  openModal('salary-pay-modal');
+}
+function openPayModalFor(id) { openPayModal(); setTimeout(() => { document.getElementById('pay-staff-select').value = id; }, 40); }
+
+function confirmSalaryPay() {
+  if (!isAdmin()) return;
+  const staffId = parseInt(document.getElementById('pay-staff-select').value);
+  const amount = parseFloat(document.getElementById('pay-amount').value) || 0;
+  const comment = document.getElementById('pay-comment').value.trim() || 'Выплата';
+  if (!staffId || amount <= 0) { showToast('Заполните поля'); return; }
+  const s = (db.staff || []).find(x => x.id === staffId);
+  if (!db.salaryLog) db.salaryLog = [];
+  db.salaryLog.push({ staffId, staffName: s ? s.name : '', amount, comment, date: nowDate(), time: nowTime() });
+  closeModal('salary-pay-modal');
+  saveDB(); renderStaff(); renderShiftLog(); updateReports();
+  showToast('Выплачено: ' + fmt(amount));
+}
+
+function renderShiftLog() {
+  const log = document.getElementById('shift-log');
+  const entries = [...(db.salaryLog || [])].reverse();
+  if (!entries.length) {
+    log.innerHTML = '<div style="padding:20px;text-align:center;font-size:13px;color:var(--muted);">Нет записей</div>';
+    return;
+  }
+  log.innerHTML = entries.map(e => `
+    <div class="shift-row">
+      <span style="color:var(--muted);font-size:12px;min-width:60px">${e.date}</span>
+      <span style="color:var(--muted);font-size:12px;min-width:42px">${e.time}</span>
+      <span style="flex:1;font-weight:500">${e.staffName}</span>
+      <span style="font-size:12px;color:var(--muted);flex:1">${e.comment}</span>
+      <span style="font-weight:500;color:${e.amount>0?'var(--accent2)':'var(--accent)'}">${e.amount>0?'+'+fmt(e.amount):'—'}</span>
+    </div>`).join('');
+}
+
+function updateReports() {
+  if (!db.checks) db.checks = [];
+  const paid = db.checks.filter(c => c.status === 'paid');
+  const rev = paid.reduce((s, c) => s + c.total, 0);
+  const disc = paid.reduce((s, c) => s + c.discAmt, 0);
+  const avg = paid.length ? rev / paid.length : 0;
+  const totalSalary = (db.staff || []).filter(s => s.active !== false).reduce((s, e) => s + (e.salary || 0), 0);
+  document.getElementById('rep-revenue').textContent = fmt(rev);
+  document.getElementById('rep-checks').textContent = paid.length + ' чеков';
+  document.getElementById('rep-avg').textContent = fmt(avg);
+  document.getElementById('rep-discounts').textContent = fmt(disc);
+  document.getElementById('rep-salary').textContent = fmt(totalSalary);
+  document.getElementById('rep-staff-cnt').textContent = (db.staff || []).filter(s => s.active !== false).length + ' сотр.';
+  document.getElementById('till-val').textContent = fmt(rev);
+  const wStats = {};
+  paid.forEach(c => {
+    if (c.waiterId) {
+      if (!wStats[c.waiterId]) wStats[c.waiterId] = { name: c.waiterName || '?', total: 0, count: 0 };
+      wStats[c.waiterId].total += c.total;
+      wStats[c.waiterId].count++;
+    }
+  });
+  const wList = document.getElementById('waiter-stats-list');
+  const wArr = Object.values(wStats).sort((a, b) => b.total - a.total);
+  wList.innerHTML = !wArr.length
+    ? '<div style="padding:16px;text-align:center;font-size:13px;color:var(--muted);">Нет данных</div>'
+    : wArr.map(w => `<div class="check-row"><span style="flex:1;font-weight:500">${w.name}</span><span style="color:var(--muted);font-size:12px">${w.count} чеков</span><span style="font-weight:500;color:var(--accent2)">${fmt(w.total)}</span></div>`).join('');
+  const cl = document.getElementById('checks-list');
+  if (!db.checks.length) {
+    cl.innerHTML = '<div style="padding:24px;text-align:center;font-size:13px;color:var(--muted);">Чеков нет</div>';
+    return;
+  }
+  cl.innerHTML = [...db.checks].reverse().map(c => `
+    <div class="check-row">
+      <span style="color:var(--muted);font-size:12px;min-width:42px">${c.time}</span>
+      <span style="min-width:60px">Стол №${c.table}</span>
+      ${c.waiterName?`<span style="font-size:12px;color:var(--accent2);min-width:80px">${c.waiterName}</span>`:'<span style="min-width:80px"></span>'}
+      <span style="flex:1;font-size:12px;color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${(c.items||[]).map(i=>i.name+'×'+i.qty).join(', ')}</span>
+      <span style="font-weight:500;min-width:70px;text-align:right">${fmt(c.total)}</span>
+      <span class="check-status ${c.status==='paid'?'cs-paid':'cs-canceled'}">${c.status==='paid'?'Оплачен':'Отменён'}</span>
+      ${c.status==='paid' ? `<button class="btn-outline" style="font-size:11px;padding:3px 8px;" onclick="printCheckById(${c.id})" title="Печать"><i class="ti ti-printer"></i></button>` : ''}
+    </div>`).join('');
+}
+
+function switchTab(tab) {
+  if ((tab === 'staff' || tab === 'reports' || tab === 'settings') && !isAdmin()) {
+    showToast('Доступ только у администратора');
+    return;
+  }
+  ['tables','order','staff','reports','settings'].forEach(t => {
+    const el = document.getElementById(t + '-view');
+    if (el) el.classList.toggle('visible', t === tab);
+  });
+  document.querySelectorAll('#header-tabs .htab').forEach((b, i) => {
+    const tabs = ['tables','order','staff','reports','settings'];
+    if (i < 5) b.classList.toggle('active', tabs[i] === tab);
+  });
+  if (tab === 'reports') updateReports();
+  if (tab === 'staff') renderStaff();
+  if (tab === 'settings') { renderZonesManage(); renderTablesZoneAssign(); }
+}
+
+function changeAdminPassword() {
+  if (!isAdmin()) return;
+  const cur = document.getElementById('admin-pwd-current').value;
+  const neu = document.getElementById('admin-pwd-new').value;
+  if (cur !== (db.settings.adminPassword || 'admin')) {
+    showToast('Неверный текущий пароль');
+    return;
+  }
+  if (!neu || neu.length < 3) {
+    showToast('Новый пароль минимум 3 символа');
+    return;
+  }
+  db.settings.adminPassword = neu;
+  saveDB();
+  document.getElementById('admin-pwd-current').value = '';
+  document.getElementById('admin-pwd-new').value = '';
+  showToast('Пароль администратора изменён');
+}
+
+function applyColor() {
+  const r = document.documentElement;
+  r.style.setProperty('--accent', document.getElementById('color-accent').value);
+  r.style.setProperty('--accent2', document.getElementById('color-accent2').value);
+  r.style.setProperty('--bg', document.getElementById('color-bg').value);
+  r.style.setProperty('--sidebar-bg', document.getElementById('color-sidebar').value);
+  r.style.setProperty('--header-color', document.getElementById('color-header').value);
+}
+
+function renderWallpapers() {
+  document.getElementById('wp-grid').innerHTML = WALLPAPERS.map(wp => `
+    <div class="wp-thumb" style="background:${wp.bg}" onclick="applyWallpaper(this,'${wp.value}','${wp.bg.replace(/'/g,'')}')">
+      <span>${wp.label}</span>
+    </div>`).join('');
+}
+function applyWallpaper(el, value, bg) {
+  document.querySelectorAll('.wp-thumb').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const app = document.getElementById('app');
+  if (value === 'none') { app.style.backgroundImage = 'none'; app.style.background = bg; }
+  else { app.style.background = bg; app.style.backgroundSize = 'cover'; }
+}
+function applyWallpaperUrl() {
+  const url = document.getElementById('wp-url').value.trim();
+  if (!url) return;
+  const app = document.getElementById('app');
+  app.style.backgroundImage = `url('${url}')`;
+  app.style.backgroundSize = 'cover';
+  app.style.backgroundPosition = 'center';
+  showToast('Обои применены');
+}
+
+function currencyChanged() {
+  db.settings.currency = document.getElementById('currency-select').value;
+  renderOrderItems(); updateReports(); renderTables(); saveDB();
+  showToast('Валюта изменена');
+}
+
+function saveSettings() {
+  if (!isAdmin()) return;
+  const name = document.getElementById('rest-name').value.trim() || 'РесторанПРО';
+  const count = parseInt(document.getElementById('table-count').value) || 12;
+  db.settings.restName = name;
+  db.settings.tableCount = count;
+  db.settings.currency = document.getElementById('currency-select').value;
+  document.getElementById('header').querySelector('h1').textContent = '🍽 ' + name;
+  initTables();
+  renderTablesZoneAssign();
+  saveDB();
+  showToast('Настройки сохранены');
+}
+
+document.getElementById('shift-time').textContent = nowTime();
+document.getElementById('rest-name').value = db.settings.restName || 'РесторанПРО';
+document.getElementById('table-count').value = db.settings.tableCount || 12;
+document.getElementById('header').querySelector('h1').textContent = '🍽 ' + (db.settings.restName || 'РесторанПРО');
+
+const currSel = document.getElementById('currency-select');
+for (let i = 0; i < currSel.options.length; i++) {
+  if (currSel.options[i].value === db.settings.currency) { currSel.selectedIndex = i; break; }
+}
+
+if (!db.salaryLog) db.salaryLog = [];
+if (!db.staff) db.staff = [];
+if (!db.zones) db.zones = JSON.parse(JSON.stringify(DEFAULT_ZONES));
+if (!db.settings.adminPassword) db.settings.adminPassword = 'admin';
+if (!db.settings.tableZones) db.settings.tableZones = {};
+
+renderWallpapers();
+initTables();
+initUIElements();
+updateReports();
+document.getElementById('sidebar-staff-count').textContent = (db.staff || []).filter(s => s.active !== false).length;
+renderLobby();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.Capacitor && location.hostname !== 'localhost') {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+if (navigator.storage && navigator.storage.persist) { navigator.storage.persist().catch(()=>{}); }
+</script>
+</body>
+</html>
